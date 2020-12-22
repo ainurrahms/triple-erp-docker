@@ -1,0 +1,69 @@
+version: '3.8'
+services:
+
+  odoo_docker:
+    image: odoo:12.0
+    depends_on:
+      - db_postgres
+    ports:
+      - "8069:8069"
+    volumes:
+      - ./config:/etc/odoo
+      - ./addons:/mnt/extra-addons
+    environment:
+    - HOST=db_postgres
+    - USER=user_db
+    - PASSWORD=root
+
+  flectra_docker:
+    image: flectrahq/flectra
+    depends_on:
+      - db_postgres
+    ports:
+      - "7073:7073"
+    environment:
+    - HOST=db_postgres
+    - USER=user_db
+    - PASSWORD=root
+
+  dolibarr_docker:
+    image: tuxgasy/dolibarr
+    environment:
+      DOLI_DB_HOST: db_mysql
+      DOLI_DB_USER: root
+      DOLI_DB_PASSWORD: root
+      DOLI_DB_NAME: dolibarr
+      DOLI_URL_ROOT: 'http://0.0.0.0'
+    ports:
+      - "8282:80"
+    links:
+      - db_mysql
+
+  db_postgres:
+   image: postgres:10
+   volumes:
+    - ./docker-postgresql-multiple-databases:/docker-entrypoint-initdb.d
+    - ./postgres-data:/var/lib/postgresql/data/pgdata
+   environment:
+    - POSTGRES_MULTIPLE_DATABASES=odoo_db,flectra_db
+    - PGDATA=/var/lib/postgresql/data/pgdata
+    - POSTGRES_USER=user_db
+    - POSTGRES_PASSWORD=root
+
+  db_mysql:
+    image: mariadb:latest
+    volumes:
+      - ./mysql-data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: dolibarr
+    
+  adminer:
+    image: adminer
+    restart: always
+    depends_on:
+      - db_postgres
+      - db_mysql
+    ports:
+      - 8080:8080
+      
